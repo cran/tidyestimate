@@ -40,7 +40,7 @@
 #' The method of generation of these aliases can be found at
 #' \code{?tidyestimate::common_genes}
 #'
-#' @return A \code{tibble}, with gene identifiers as the first column
+#' @return A \code{tibble}, with HGNC symbols as the first column
 #' @export
 #' @importFrom rlang .data
 #' @examples
@@ -51,21 +51,24 @@ filter_common_genes <- function (df, id = c("entrezgene_id", "hgnc_symbol"),
                                  find_alias = FALSE) {
   if (!tidy) {
     df <- dplyr::as_tibble(df, rownames = id)
-  }
+  } 
   
-  if (sum(duplicated(df[[id]])) > 0) warning("Input dataframe has duplicated IDs")
+  # Assumes first column contains gene IDs
+  user_gene_col <- names(df)[1]
+
+  if (sum(duplicated(df[[user_gene_col]])) > 0) warning("Input dataframe has duplicated IDs")
   
   common_genes <- tidyestimate::common_genes
   
   unique_common_genes <- unique(common_genes[,1:2])
   
-  filtered <- dplyr::semi_join(df, common_genes) 
+  filtered <- dplyr::semi_join(df, common_genes, by = stats::setNames(id, user_gene_col)) 
   
-  missing <- dplyr::anti_join(common_genes, df)[[id]]
+  missing <- dplyr::anti_join(common_genes, df, by = stats::setNames(user_gene_col, id))[[user_gene_col]]
   
   if (find_alias & id == "hgnc_symbol") {
     filtered <- find_alias(df, common_genes, missing, filtered)
-    missing <- dplyr::anti_join(common_genes, filtered)[["hgnc_symbol"]]
+    missing <- dplyr::anti_join(common_genes, filtered, by = stats::setNames(user_gene_col, "hgnc_symbol"))[["hgnc_symbol"]]
   }
   
   if (tell_missing) tell_missing(missing)
@@ -77,6 +80,13 @@ filter_common_genes <- function (df, id = c("entrezgene_id", "hgnc_symbol"),
                      in your dataset.
                      
                      ", sep = "\n\n"))
+  
+  if (id == "entrezgene_id") {
+    hgnc_entrez <- dplyr::select(common_genes, "hgnc_symbol", "entrezgene_id")
+    filtered <- dplyr::left_join(filtered, hgnc_entrez, by = stats::setNames("entrezgene_id", user_gene_col)) |> 
+      dplyr::select(-user_gene_col) |> 
+      dplyr::relocate("hgnc_symbol")
+  }
   
   filtered
 }
