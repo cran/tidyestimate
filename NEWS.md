@@ -1,3 +1,11 @@
+# tidyestimate 1.1.1
+
+## Minor improvements and fixes
+
+* Update R-CMD-Check GitHub actions
+* Remove unused dependencies
+* Add required "_PACKAGE" sentinel to package documentation
+
 # tidyestimate 1.1.0
 
 ## Bugfixes
